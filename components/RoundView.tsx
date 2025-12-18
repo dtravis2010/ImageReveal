@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Round, Guess, User } from '../gameTypes';
 import { subscribeToGuesses, submitGuess, updateRound, updateScoreboard, updateUserStatus } from '../firebaseService';
+import { isAnswerCorrect } from '../utils';
 import confetti from 'canvas-confetti';
 
 interface RoundViewProps {
@@ -37,7 +38,7 @@ export const RoundView: React.FC<RoundViewProps> = ({
       // Check for correct guess
       if (round.status === 'active') {
         const correctGuess = newGuesses.find(g => 
-          g.text.toLowerCase().trim() === round.answer.toLowerCase().trim() && !g.isCorrect
+          isAnswerCorrect(g.text, round.answer) && !g.isCorrect
         );
         
         if (correctGuess) {

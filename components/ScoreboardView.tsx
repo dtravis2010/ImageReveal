@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Scoreboard, User } from '../gameTypes';
 import { subscribeToScoreboard, clearScoreboard } from '../firebaseService';
+import { exportToCSV } from '../utils';
 
 interface ScoreboardViewProps {
   eventId: string;
@@ -42,18 +43,7 @@ export const ScoreboardView: React.FC<ScoreboardViewProps> = ({
       };
     });
 
-    const csv = [
-      'Name,Wins,Plays,Win Rate %,Fastest Time (ms)',
-      ...data.map(d => `${d.name},${d.wins},${d.plays},${d.winRate},${d.fastestMs}`)
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `scoreboard_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exportToCSV(data, `scoreboard_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   const leaderboard = scoreboard ? 
