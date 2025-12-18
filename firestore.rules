@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is a host
+    function isHost() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isHost == true;
+    }
+    
+    // Helper function to check if user is one of the round participants
+    function isRoundParticipant(roundId) {
+      let roundData = get(/databases/$(database)/documents/rounds/$(roundId)).data;
+      return request.auth.uid in roundData.playerIds;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone authenticated can read all users (for lobby)
+      allow read: if isAuthenticated();
+      
+      // Users can only write their own document
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Hosts can update any user (for admin actions)
+      allow update: if isHost();
+    }
+    
+    // Rounds collection
+    match /rounds/{roundId} {
+      // Anyone authenticated can read rounds
+      allow read: if isAuthenticated();
+      
+      // Only hosts can create and update rounds
+      allow create: if isHost();
+      allow update: if isHost();
+      
+      // Guesses subcollection
+      match /guesses/{guessId} {
+        // Anyone can read guesses (for live feed)
+        allow read: if isAuthenticated();
+        
+        // Only round participants can submit guesses
+        allow create: if isAuthenticated() && 
+                        isRoundParticipant(roundId) &&
+                        request.resource.data.playerId == request.auth.uid;
+      }
+    }
+    
+    // Scoreboard collection
+    match /scoreboard/{eventId} {
+      // Anyone authenticated can read scoreboard
+      allow read: if isAuthenticated();
+      
+      // Only hosts can write to scoreboard
+      allow write: if isHost();
+    }
+    
+    // Settings collection
+    match /settings/{settingId} {
+      // Anyone authenticated can read settings
+      allow read: if isAuthenticated();
+      
+      // Only hosts can update settings
+      allow write: if isHost();
+    }
+    
+    // Images collection (metadata)
+    match /images/{imageId} {
+      // Anyone authenticated can read images
+      allow read: if isAuthenticated();
+      
+      // Only hosts can upload images
+      allow create: if isHost();
+    }
+  }
+}
